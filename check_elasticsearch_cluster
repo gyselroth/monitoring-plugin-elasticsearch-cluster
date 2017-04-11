@@ -1,0 +1,116 @@
+#!/bin/bash
+
+#
+# Elasicsearch cluster health check script
+#
+# @author  Raffael Sahli <sahli@gyselroth.com> 2014
+# @license MIT
+#
+
+usage()
+{
+cat << EOF
+usage: $0 options
+
+OPTIONS:
+   -h Shows this message
+   -H [Default: localhost] Elasticsearch cluster node
+   -p [Default: 9200] Port
+   -s [Default: <notset>] SSL
+   -a [Default: status] Check attribute
+   -w [Default: <notset>] Warning (Only required if -a is different than the default "status")
+   -c [Default: <notset>] Critical (Only required if -a is different than the default "status")
+EOF
+}
+
+server=localhost
+check=status
+should=
+warn=
+crit=
+ssl=0
+port=9200
+while getopts "h:H:a:w:c:p:s" OPTION
+do
+     case $OPTION in
+         h)
+             usage
+             exit 1
+             ;;
+         H)
+             server=$OPTARG
+             ;;
+         a)
+             check=$OPTARG
+             ;;
+         c)
+             crit=$OPTARG
+             ;;
+         w)
+             warn=$OPTARG
+             ;;
+         p)
+             port=$OPTARG
+             ;;
+         s)
+             ssl=1
+             ;;
+         ?)
+             usage
+             exit
+             ;;
+     esac
+done
+
+if [ "$ssl" -eq 0 ]; then
+    proto="http://"
+else
+    proto="https://"
+fi
+
+result=$(curl -XGET $proto$server:$port/_cluster/health?pretty=true 2>/dev/null| grep $check | cut -d ':' -f2 | tr -d '"',' ',',','"')
+
+if [ "$check" == "status" ]; then 
+    case "$result" in
+        "green")
+            echo "elasticsearch cluster status is green"
+            exit 0
+        ;;
+        "yellow" )
+            echo "elasticsearch cluster status is yellow"
+            exit 1
+        ;;
+        "red" )
+            echo "elasticsearch cluster status is red"
+            exit 2
+        ;;
+        *)
+            echo "elasticsearch cluster status is unknown"
+            exit 3
+        ;;
+    esac
+else
+    if [ "$warn" == "" ]; then
+        echo "option warning (-w) is required"
+        echo
+        usage
+        exit 3
+    elif [ "$crit" == "" ]; then
+        echo "option critical (-c) is required"
+        echo
+        usage
+        exit 3
+    elif [ "$result" == "" ]; then
+        echo "elasticsearch cluster attribute $check unknown, attribute does not exists in /_cluster/health response"
+        exit 3
+    elif [[ "$result" -lt "$warn" && "$result" -lt "$crit" ]]; then 
+        echo "elasticsearch cluster health $check=$result is OK"
+        exit 0
+    elif [[ "$result" -ge "$warn" && "$result" -lt "$crit" ]]; then 
+        echo "elasticsearch cluster health $check=$result is WARNING"
+        exit 1
+    else
+        echo "elasticsearch cluster health $check=$result is CRITICAL"
+        exit 2
+    fi
+fi
