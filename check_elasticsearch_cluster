@@ -3,8 +3,8 @@
 #
 # Elasicsearch cluster health check script
 #
-# @author  Raffael Sahli <sahli@gyselroth.com> 2014
-# @license MIT
+# @author  Raffael Sahli <sahli@gyselroth.com>
+# @license MIT, gyselroth GmbH 2017
 #
 
 usage()

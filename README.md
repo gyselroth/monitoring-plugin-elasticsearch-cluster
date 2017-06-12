@@ -1,4 +1,4 @@
-# Monitoring Plugin: Galera cluster
+# Monitoring Plugin: Elasticsearch cluster
 
 ### Description
 Monitor the status of your elasticsearch cluster. This script does monitor the value "status" from "ES_API/_cluster/health" if not specified anything else.
